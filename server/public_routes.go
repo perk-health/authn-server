@@ -86,5 +86,13 @@ func PublicRoutes(app *app.App) []*route.HandledRoute {
 		)
 	}
 
+	for providerName := range app.SmartOnFhirProviders {
+		routes = append(routes,
+			route.Get("/fhir/"+providerName+"/launch/ehr/provider").
+				SecuredWith(route.Unsecured()).
+				Handle(handlers.GetFhirEhrLaunch(app, providerName)),
+		)
+	}
+
 	return routes
 }
