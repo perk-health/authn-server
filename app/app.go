@@ -17,17 +17,18 @@ import (
 type pinger func() bool
 
 type App struct {
-	DB                *sqlx.DB
-	DbCheck           pinger
-	RedisCheck        pinger
-	Config            *Config
-	AccountStore      data.AccountStore
-	RefreshTokenStore data.RefreshTokenStore
-	KeyStore          data.KeyStore
-	Actives           data.Actives
-	Reporter          ops.ErrorReporter
-	OauthProviders    map[string]oauth.Provider
-	Logger            logrus.FieldLogger
+	DB                   *sqlx.DB
+	DbCheck              pinger
+	RedisCheck           pinger
+	Config               *Config
+	AccountStore         data.AccountStore
+	RefreshTokenStore    data.RefreshTokenStore
+	KeyStore             data.KeyStore
+	Actives              data.Actives
+	Reporter             ops.ErrorReporter
+	OauthProviders       map[string]oauth.Provider
+	SmartOnFhirProviders map[string]oauth.Provider
+	Logger               logrus.FieldLogger
 }
 
 func NewApp(cfg *Config, logger logrus.FieldLogger) (*App, error) {
@@ -109,18 +110,24 @@ func NewApp(cfg *Config, logger logrus.FieldLogger) (*App, error) {
 		oauthProviders["microsoft"] = *oauth.NewMicrosoftProvider(cfg.MicrosoftOauthCredientials)
 	}
 
+	smartOnFhirProviders := map[string]oauth.Provider{}
+	if cfg.EpicSmartOnFhirCredentials != nil {
+		smartOnFhirProviders["epic"] = *oauth.NewEpicSmartOnFhirProvider(cfg.EpicSmartOnFhirCredentials)
+	}
+
 	return &App{
 		// Provide access to root DB - useful when extending AccountStore functionality
-		DB:                db,
-		DbCheck:           func() bool { return db.Ping() == nil },
-		RedisCheck:        func() bool { return redis != nil && redis.Ping(context.TODO()).Err() == nil },
-		Config:            cfg,
-		AccountStore:      accountStore,
-		RefreshTokenStore: tokenStore,
-		KeyStore:          keyStore,
-		Actives:           actives,
-		Reporter:          errorReporter,
-		OauthProviders:    oauthProviders,
-		Logger:            logger,
+		DB:                   db,
+		DbCheck:              func() bool { return db.Ping() == nil },
+		RedisCheck:           func() bool { return redis != nil && redis.Ping(context.TODO()).Err() == nil },
+		Config:               cfg,
+		AccountStore:         accountStore,
+		RefreshTokenStore:    tokenStore,
+		KeyStore:             keyStore,
+		Actives:              actives,
+		Reporter:             errorReporter,
+		OauthProviders:       oauthProviders,
+		SmartOnFhirProviders: smartOnFhirProviders,
+		Logger:               logger,
 	}, nil
 }
