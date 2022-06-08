@@ -16,7 +16,7 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *Provider {
 	config := &oauth2.Config{
 		ClientID:     credentials.ID,
 		ClientSecret: credentials.Secret,
-		Scopes:       []string{"openid", "fhirUser", "profile", "launch", "Patient.read"},
+		Scopes:       []string{"online_access", "openid", "fhirUser", "profile", "launch", "user/Patient.rs"},
 		// EndpointParams urlValues,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/authorize",
