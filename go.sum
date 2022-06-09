@@ -141,6 +141,8 @@ github.com/prometheus/common v0.0.0-20171104095907-e3fb1a1acd76/go.mod h1:daVV7q
 github.com/prometheus/procfs v0.0.0-20171017214025-a6e9df898b13 h1:leRfx9kcgnSDkqAFhaaUcRqpAZgnFdwZkZcdRcea1h0=
 github.com/prometheus/procfs v0.0.0-20171017214025-a6e9df898b13/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/ryanuber/columnize v2.1.0+incompatible/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
+github.com/samply/golang-fhir-models/fhir-models v0.2.1 h1:75LJIK6jPYBjkwXGIF4k4o2mxuPIiLYR4o7qwgojQOk=
+github.com/samply/golang-fhir-models/fhir-models v0.2.1/go.mod h1:EiEcTW0WIjByVUA/z4GdOx3mEzfMoUDUJq529Q6MDLc=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.0.5 h1:8c8b5uO0zS4X6RPl/sd1ENwSkIc0/H2PaHxE3udaE8I=

@@ -41,6 +41,7 @@ require (
 	github.com/prometheus/client_model v0.0.0-20170216185247-6f3806018612 // indirect
 	github.com/prometheus/common v0.0.0-20171104095907-e3fb1a1acd76 // indirect
 	github.com/prometheus/procfs v0.0.0-20171017214025-a6e9df898b13 // indirect
+	github.com/samply/golang-fhir-models/fhir-models v0.2.1 // indirect
 	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781 // indirect
 	golang.org/x/sys v0.0.0-20210423082822-04245dca01da // indirect
 	google.golang.org/appengine v0.0.0-20180405220334-0a24098c0ec6 // indirect

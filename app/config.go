@@ -20,6 +20,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/keratin/authn-server/lib/oauth"
 	"github.com/keratin/authn-server/lib/route"
+	"github.com/keratin/authn-server/lib/smart_on_fhir"
 	"github.com/keratin/authn-server/ops"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -75,7 +76,7 @@ type Config struct {
 	FacebookOauthCredentials    *oauth.Credentials
 	DiscordOauthCredentials     *oauth.Credentials
 	MicrosoftOauthCredientials  *oauth.Credentials
-	EpicSmartOnFhirCredentials  *oauth.Credentials
+	EpicSmartOnFhirCredentials  *smart_on_fhir.Credentials
 }
 
 // OAuthEnabled returns true if any provider is configured.
@@ -635,7 +636,7 @@ var configurers = []configurer{
 	// AuthN will enable routes for Epic Smart on Smart on FHIR signin.
 	func(c *Config) error {
 		if val, ok := os.LookupEnv("EPIC_SMART_ON_FHIR_CREDENTIALS"); ok {
-			credentials, err := oauth.NewCredentials(val)
+			credentials, err := smart_on_fhir.NewCredentials(val)
 			if err == nil {
 				c.EpicSmartOnFhirCredentials = credentials
 			}
