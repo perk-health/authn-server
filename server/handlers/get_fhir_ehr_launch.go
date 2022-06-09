@@ -17,8 +17,10 @@ func GetFhirEhrLaunch(app *app.App, providerName string) http.HandlerFunc {
 		issuer := r.FormValue("iss")
 		launch := r.FormValue("launch")
 
-		metadata := new(ehrAuthMetadata)
-		discoverAuthServer(issuer, metadata)
+		// Not currently used, but could be:
+		// TODO: Move into smart_on_fhir/provider and automatically use
+		// metadata := new(ehrAuthMetadata)
+		// discoverAuthServer(issuer, metadata)
 
 		// set nonce in a secured cookie
 		bytes, err := lib.GenerateToken()

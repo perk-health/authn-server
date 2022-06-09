@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/keratin/authn-server/app/data"
 	"github.com/keratin/authn-server/lib/oauth"
+	"github.com/keratin/authn-server/lib/smart_on_fhir"
 	"github.com/keratin/authn-server/ops"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -27,7 +28,7 @@ type App struct {
 	Actives              data.Actives
 	Reporter             ops.ErrorReporter
 	OauthProviders       map[string]oauth.Provider
-	SmartOnFhirProviders map[string]oauth.Provider
+	SmartOnFhirProviders map[string]smart_on_fhir.FhirProvider
 	Logger               logrus.FieldLogger
 }
 
@@ -110,9 +111,9 @@ func NewApp(cfg *Config, logger logrus.FieldLogger) (*App, error) {
 		oauthProviders["microsoft"] = *oauth.NewMicrosoftProvider(cfg.MicrosoftOauthCredientials)
 	}
 
-	smartOnFhirProviders := map[string]oauth.Provider{}
+	smartOnFhirProviders := map[string]smart_on_fhir.FhirProvider{}
 	if cfg.EpicSmartOnFhirCredentials != nil {
-		smartOnFhirProviders["epic"] = *oauth.NewEpicSmartOnFhirProvider(cfg.EpicSmartOnFhirCredentials)
+		smartOnFhirProviders["epic"] = *smart_on_fhir.NewEpicSmartOnFhirProvider(cfg.EpicSmartOnFhirCredentials)
 	}
 
 	return &App{

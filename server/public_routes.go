@@ -92,7 +92,7 @@ func PublicRoutes(app *app.App) []*route.HandledRoute {
 				SecuredWith(route.Unsecured()).
 				Handle(handlers.GetFhirEhrLaunch(app, providerName)),
 
-			route.Get("/fhir/"+providerName+"/launch/return").
+			route.Get("/fhir/"+providerName+"/return/provider").
 				SecuredWith(route.Unsecured()).
 				Handle(handlers.GetFhirReturn(app, providerName)),
 		)
