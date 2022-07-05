@@ -25,6 +25,49 @@ type FhirTokenResponse struct {
 	PatientFhirId string `json:"patient"`
 }
 
+// Claims on Epic's Access Token
+type EpicAccessTokenClaim struct {
+	Audience     string `json:"aud"`
+	ClientID     string `json:"client_id"`
+	EpicECI      string `json:"epic.eci"`
+	EpicMetadata string `json:"epic.metadata"`
+	TokenType    string `json:"epic.tokentype"`
+	IssuedAt     string `json:"iat"`
+	Issuer       string `json:"iss"`
+	JwtID        string `json:"jti"`
+	NotBefore    string `json:"nbf"`
+	Subject      string `json:"sub"`
+}
+
+type EpicIdTokenClaim struct {
+	Audience          string `json:"aud"`
+	Expiration        string `json:"exp"`
+	FhirUser          string `json:"fhirUser"`
+	IssuedAt          string `json:"iat"`
+	Issuer            string `json:"iss"`
+	PreferredUsername string `json:"preferred_username"`
+	Subject           string `json:"sub"`
+}
+
+type OpenIDConfiguration struct {
+	Issuer                string `json:"issuer"`
+	JwksURI               string `json:"jwks_uri"`
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string `json:"token_endpoint"`
+}
+
+type EpicJwksResponse struct {
+	Keys []EpicJwksKey `json:"keys"`
+}
+
+type EpicJwksKey struct {
+	Algorithm string `json:"kty"`
+	Modulus   string `json:"n"`
+	Exponent  string `json:"e"`
+	Usage     string `json:"use"`
+	KeyID     string `json:"kid"`
+}
+
 // UserInfoFetcher is the function signature for fetching UserInfo from a Provider
 type UserInfoFetcher = func(t *FhirTokenResponse) (*UserInfo, error)
 

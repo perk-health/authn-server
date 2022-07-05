@@ -10,23 +10,50 @@ import (
 	"time"
 )
 
-type ehrAuthMetadata struct {
-	AuthEndpoint  string `json:"authorization_endpoint"`
-	TokenEndpoint string `json:"token_endpoint"`
-}
-
 func discoverAuthServer(issuer string, target interface{}) error {
 	resp, err := http.Get(issuer + "/.well-known/smart-configuration")
-
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
 
-	b, err := io.ReadAll(resp.Body)
-
+	b, _ := io.ReadAll(resp.Body)
 	return json.Unmarshal(b, target)
+}
+
+func fetchEpicJWKSKeyID() (string, error) {
+	client := http.Client{}
+	req, _ := http.NewRequest("GET", "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/.well-known/openid-configuration", nil)
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	epicConfig := new(OpenIDConfiguration)
+	json.Unmarshal(body, epicConfig)
+
+	fmt.Println("JWKS URI: ", epicConfig.JwksURI)
+
+	jwksReq, _ := http.NewRequest("GET", epicConfig.JwksURI, nil)
+	jwksReq.Header.Add("Content-Type", "application/json")
+
+	jwksResp, err := client.Do(jwksReq)
+	if err != nil {
+		return "", err
+	}
+	defer jwksResp.Body.Close()
+
+	epicJwksResponse := new(EpicJwksResponse)
+	jwksBody, err := io.ReadAll(jwksResp.Body)
+	json.Unmarshal(jwksBody, epicJwksResponse)
+
+	return epicJwksResponse.Keys[0].KeyID, err
 }
 
 func RequestAccessToken(tokenUrl string, clientId string, clientSecret string, code string) (*FhirTokenResponse, error) {
@@ -46,16 +73,19 @@ func RequestAccessToken(tokenUrl string, clientId string, clientSecret string, c
 	// Create the request
 	req, err := http.NewRequest("POST", tokenUrl, strings.NewReader(encodedBody))
 	if err != nil {
-		return nil, fmt.Errorf("Got error %s", err.Error())
+		return nil, fmt.Errorf("got error %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	// Send the request
 	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 
 	// Read the body
 	defer resp.Body.Close()
-	b, err := io.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 
 	fmt.Println("RequestAccessToken Body:", string(b))
 

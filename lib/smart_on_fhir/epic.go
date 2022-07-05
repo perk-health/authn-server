@@ -1,11 +1,10 @@
 package smart_on_fhir
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 
+	"github.com/cristalhq/jwt/v4"
 	"golang.org/x/oauth2"
 )
 
@@ -22,10 +21,9 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 			"fhirUser",
 			"profile",
 			"launch",
-			"user/Patient.rs",
-			"user/Practitioner.rs",
+			"user/Patient.read",
+			"user/Patient.search",
 			"user/Practitioner.Read",
-			"patient/Practitioner.Read",
 		},
 		// EndpointParams urlValues,
 		Endpoint: oauth2.Endpoint{
@@ -37,39 +35,26 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 	return &FhirProvider{
 		config: config,
 		UserInfo: func(t *FhirTokenResponse) (*UserInfo, error) {
-			// Steps:
-			// 1. Extract the sub from the access token
-			// 2. Combine the subject with the Practitioner endpoint to get user data
-			// 3. Unmarshal the response into a Practitioner object
-
-			var me struct {
-				id string
-				// telecom						contactPoint
-			}
-
-			oauth2Token := &oauth2.Token{
-				AccessToken: t.AccessToken,
-			}
-
-			client := config.Client(context.TODO(), oauth2Token)
-			resp, err := client.Get("https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/Practitioner/")
+			key, err := fetchEpicJWKSKeyID()
 			if err != nil {
 				return nil, err
 			}
-			defer resp.Body.Close()
 
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
+			idToken, err := jwt.ParseNoVerify([]byte(t.IdToken))
+			var epicIdTokenClaims *EpicIdTokenClaim
+			json.Unmarshal(idToken.Claims(), &epicIdTokenClaims)
+
+			if idToken.Header().KeyID == key {
+				fmt.Println("=========== Key ID matches ===========")
+				var user UserInfo
+				user.ID = epicIdTokenClaims.Subject
+				user.Email = epicIdTokenClaims.Subject // User's email is going to be user's ID on Epic
+				fmt.Println(user)
+				return &user, err
+			} else {
+				fmt.Println("=========== Key ID does not match ===========")
 				return nil, err
 			}
-			fmt.Println(string(body))
-
-			var user UserInfo
-			err = json.Unmarshal(body, &me)
-			user.ID = me.id
-			// user.Email = me.telecom[0].value
-			fmt.Println(user)
-			return &user, err
 		},
 	}
 }

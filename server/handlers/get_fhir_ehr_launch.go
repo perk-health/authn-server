@@ -18,8 +18,7 @@ func GetFhirEhrLaunch(app *app.App, providerName string) http.HandlerFunc {
 		launch := r.FormValue("launch")
 
 		// Not currently used, but could be:
-		// TODO: Move into smart_on_fhir/provider and automatically use
-		// metadata := new(ehrAuthMetadata)
+		// metadata := new(OpenIDConfiguration)
 		// discoverAuthServer(issuer, metadata)
 
 		// set nonce in a secured cookie
@@ -38,10 +37,10 @@ func GetFhirEhrLaunch(app *app.App, providerName string) http.HandlerFunc {
 		if err != nil {
 			WriteData(w, http.StatusBadRequest, map[string]interface{}{"error": err.Error()})
 		}
-		state, err := stateToken.Sign(app.Config.OAuthSigningKey)
+		state, _ := stateToken.Sign(app.Config.OAuthSigningKey)
 
 		// Create the URL to redirect to
-		finalRedirectUrl, err := url.Parse(provider.Config(redirectURI).AuthCodeURL(state))
+		finalRedirectUrl, _ := url.Parse(provider.Config(redirectURI).AuthCodeURL(state))
 
 		// Add the launch and aud parameters to the URL
 		// http://www.hl7.org/fhir/smart-app-launch/app-launch.html#request-4
