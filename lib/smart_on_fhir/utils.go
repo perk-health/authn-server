@@ -22,14 +22,14 @@ func discoverAuthServer(issuer string, target interface{}) error {
 	return json.Unmarshal(b, target)
 }
 
-func fetchEpicJWKSKeyID() (string, error) {
+func fetchEpicJWKS() (*EpicJwksResponse, error) {
 	client := http.Client{}
 	req, _ := http.NewRequest("GET", "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/.well-known/openid-configuration", nil)
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -38,14 +38,14 @@ func fetchEpicJWKSKeyID() (string, error) {
 	epicConfig := new(OpenIDConfiguration)
 	json.Unmarshal(body, epicConfig)
 
-	fmt.Println("JWKS URI: ", epicConfig.JwksURI)
+	fmt.Println("==> JWKS URI:", epicConfig.JwksURI)
 
 	jwksReq, _ := http.NewRequest("GET", epicConfig.JwksURI, nil)
 	jwksReq.Header.Add("Content-Type", "application/json")
 
 	jwksResp, err := client.Do(jwksReq)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer jwksResp.Body.Close()
 
@@ -53,7 +53,7 @@ func fetchEpicJWKSKeyID() (string, error) {
 	jwksBody, err := io.ReadAll(jwksResp.Body)
 	json.Unmarshal(jwksBody, epicJwksResponse)
 
-	return epicJwksResponse.Keys[0].KeyID, err
+	return epicJwksResponse, err
 }
 
 func RequestAccessToken(tokenUrl string, clientId string, clientSecret string, code string) (*FhirTokenResponse, error) {
@@ -87,7 +87,7 @@ func RequestAccessToken(tokenUrl string, clientId string, clientSecret string, c
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
 
-	fmt.Println("RequestAccessToken Body:", string(b))
+	fmt.Println("==> RequestAccessToken Body:", string(b))
 
 	// Unmarshal the body into the `target` struct and return
 	target := new(FhirTokenResponse)
