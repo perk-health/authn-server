@@ -35,7 +35,7 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 	return &FhirProvider{
 		config: config,
 		UserInfo: func(t *FhirTokenResponse) (*UserInfo, error) {
-			key, err := fetchEpicJWKSKeyID()
+			keys, err := fetchEpicJWKS()
 			if err != nil {
 				return nil, err
 			}
@@ -44,7 +44,18 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 			var epicIdTokenClaims *EpicIdTokenClaim
 			json.Unmarshal(idToken.Claims(), &epicIdTokenClaims)
 
-			if idToken.Header().KeyID == key {
+			hasJwks := false
+			fmt.Println("==> Token kid:", idToken.Header().KeyID)
+			for index, key := range keys.Keys {
+				fmt.Println("===> Key", index + 1, "kid:", key.KeyID)
+
+				if key.KeyID == idToken.Header().KeyID {
+					hasJwks = true
+					break
+				}
+			}
+
+			if hasJwks {
 				fmt.Println("=========== Key ID matches ===========")
 				var user UserInfo
 				user.ID = epicIdTokenClaims.Subject
