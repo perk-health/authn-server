@@ -22,8 +22,8 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		}
 		http.SetCookie(w, nonceCookie(app.Config, ""))
 
-		// // exchange code for tokens and user info
-		// redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return/provider"
+		// exchange code for tokens and user info
+		// redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return"
 		tokenUrl := provider.TokenUrl()
 		clientId := provider.ClientID()
 		clientSecret := provider.ClientSecret()
