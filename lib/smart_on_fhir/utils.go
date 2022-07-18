@@ -8,6 +8,12 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"bytes"
+	"crypto/rsa"
+	"encoding/base64"
+	"encoding/binary"
+	"math/big"
 )
 
 func discoverAuthServer(issuer string, target interface{}) error {
@@ -96,4 +102,53 @@ func RequestAccessToken(tokenUrl string, clientId string, clientSecret string, c
 		return nil, err
 	}
 	return target, nil
+}
+
+func buildRSAPublicKey(modulus string, exponent string) (*rsa.PublicKey, error) {
+	fmt.Println("===> Modulus:", modulus)
+	decodedModulus, err := base64.RawURLEncoding.DecodeString(modulus)
+	if err != nil {
+		fmt.Println(err)
+		return &rsa.PublicKey{}, err
+	}
+
+	bigN := big.NewInt(0)
+	bigN.SetBytes(decodedModulus)
+	if err != nil {
+		fmt.Println(err)
+		return &rsa.PublicKey{}, err
+	}
+
+	fmt.Println("===> Decoded Modulus:", decodedModulus)
+	fmt.Println("===> BigN:", bigN)
+
+	decodedExponent, err := base64.StdEncoding.DecodeString(exponent)
+	if err != nil {
+		fmt.Println(err)
+		return &rsa.PublicKey{}, err
+	}
+
+	fmt.Println("===> Exponent:", exponent)
+	fmt.Println("===> Decoded Exponent:", decodedExponent)
+
+	var eBytes []byte
+	if len(decodedExponent) < 8 {
+		eBytes = make([]byte, 8-len(decodedExponent), 8)
+		eBytes = append(eBytes, decodedExponent...)
+	} else {
+		eBytes = decodedExponent
+	}
+
+	eReader := bytes.NewReader(eBytes)
+	var e uint64
+	err = binary.Read(eReader, binary.BigEndian, &e)
+	if err != nil {
+		fmt.Println(err)
+		return &rsa.PublicKey{}, err
+	}
+	pKey := rsa.PublicKey{N: bigN, E: int(e)}
+
+	fmt.Println("===> Public RSA Key", pKey)
+
+	return &pKey, nil
 }

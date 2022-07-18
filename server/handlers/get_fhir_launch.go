@@ -10,9 +10,9 @@ import (
 	"github.com/keratin/authn-server/lib"
 )
 
-func GetFhirEhrLaunch(app *app.App, providerName string) http.HandlerFunc {
+func GetFhirLaunch(app *app.App, providerName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return/provider"
+		redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return"
 		provider := app.SmartOnFhirProviders[providerName]
 		issuer := r.FormValue("iss")
 		launch := r.FormValue("launch")

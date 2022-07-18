@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"crypto/rsa"
+
 	"github.com/cristalhq/jwt/v4"
 	"golang.org/x/oauth2"
 )
@@ -45,14 +47,27 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 			json.Unmarshal(idToken.Claims(), &epicIdTokenClaims)
 
 			hasJwks := false
+			var rsaPublicKey *rsa.PublicKey
+
 			fmt.Println("==> Token kid:", idToken.Header().KeyID)
 			for index, key := range keys.Keys {
 				fmt.Println("===> Key", index + 1, "kid:", key.KeyID)
 
 				if key.KeyID == idToken.Header().KeyID {
+					rsaPublicKey, err = buildRSAPublicKey(key.Modulus, key.Exponent)
 					hasJwks = true
 					break
 				}
+			}
+
+			// create a Verifier (HMAC in this example)
+			verifier, err := jwt.NewVerifierRS(jwt.RS256, rsaPublicKey)
+
+			_, err = jwt.Parse([]byte(t.IdToken), verifier)
+			if err == nil {
+				fmt.Println("=========== ID Token verified ===========")
+			} else {
+				return nil, err
 			}
 
 			if hasJwks {
