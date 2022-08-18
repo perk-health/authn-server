@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 jobs:
   linux64:
@@ -33,66 +32,10 @@ jobs:
           name: authn-linux64
           path: dist/authn-linux64
 
-  windows64:
-    name: Compile for Windows
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: ^1.17
-      - run: go mod download
-      - run: sudo apt install mingw-w64
-
-      - name: compile
-        run: |
-          go build \
-            -ldflags "-X main.VERSION=${VERSION##*/v}" \
-            -o dist/authn-windows64.exe
-        env:
-          VERSION: ${{ github.ref }}
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: 1
-          CC: x86_64-w64-mingw32-gcc
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: authn-windows64.exe
-          path: dist/authn-windows64.exe
-
-  macos64:
-    name: Compile for MacOS
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: ^1.17
-      - run: go mod download
-
-      - name: compile
-        run: |
-          go build \
-            -ldflags "-X main.VERSION=${VERSION##*/v}" \
-            -o dist/authn-macos64
-        env:
-          VERSION: ${{ github.ref }}
-          GOOS: darwin
-          GOARCH: amd64
-          CGO_ENABLED: 1
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: authn-macos64
-          path: dist/authn-macos64
-
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [linux64, windows64, macos64]
+    needs: [linux64]
 
     steps:
       - name: Download artifacts
@@ -118,28 +61,8 @@ jobs:
           asset_name: authn-linux64
           asset_content_type: application/octet-stream
 
-      - name: Upload Windows64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./authn-windows64.exe/authn-windows64.exe
-          asset_name: authn-windows64.exe
-          asset_content_type: application/vnd.microsoft.portable-executable
-
-      - name: Upload Macos64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./authn-macos64/authn-macos64
-          asset_name: authn-macos64
-          asset_content_type: application/octet-stream
-
   register:
-    name: Register on Docker Hub
+    name: Register on AWS ECR
     runs-on: ubuntu-latest
     needs: release
     steps:
@@ -160,10 +83,22 @@ jobs:
         env:
           VERSION: ${{ github.ref }}
 
-      - name: Push to Docker Hub
-        uses: docker/build-push-action@v1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          repository: keratin/authn-server
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          tags: latest,${{ steps.version.outputs.number }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: keratin-sch
+          IMAGE_TAG: latest,${{ steps.version.outputs.number }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
