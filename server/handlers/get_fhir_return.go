@@ -11,7 +11,14 @@ import (
 
 func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("---- Starting: GetFhirReturn ----")
+
 		provider := app.SmartOnFhirProviders[providerName]
+		// exchange code for tokens and user info
+		// redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return"
+		tokenUrl := provider.TokenUrl()
+		clientId := provider.ClientID()
+		clientSecret := provider.ClientSecret()
 
 		state, err := getState(app.Config, r)
 		if err != nil {
@@ -22,18 +29,22 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		}
 		http.SetCookie(w, nonceCookie(app.Config, ""))
 
-		// exchange code for tokens and user info
-		// redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return"
-		tokenUrl := provider.TokenUrl()
-		clientId := provider.ClientID()
-		clientSecret := provider.ClientSecret()
+		fail := func(err error) {
+			app.Reporter.ReportRequestError(err, r)
+			redirectFailure(w, r, state.Destination)
+		}
 
+		// ===> exchange code for tokens and user info
 		tokenResponse, err := smart_on_fhir.RequestAccessToken(tokenUrl, clientId, clientSecret, r.FormValue("code"))
-
+		if err != nil {
+			fmt.Println("Error getting token:", err)
+			fail(err)
+			return
+		}
 		providerUser, err := provider.UserInfo(tokenResponse)
 		if err != nil {
-			// fail(errors.Wrap(err, "userInfo"))
 			fmt.Println("Error getting user info:", err)
+			fail(err)
 			return
 		}
 
@@ -63,6 +74,7 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		// sessions.Set(app.Config, w, sessionToken)
 
 		// redirect back to frontend (success or failure)
+		fmt.Println("===> state.Destination:", state.Destination)
 		http.Redirect(w, r, state.Destination, http.StatusSeeOther)
 	}
 }
