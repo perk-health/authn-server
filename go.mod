@@ -31,7 +31,7 @@ require (
 	cloud.google.com/go v0.0.0-20180417120045-d19004dbbee5 // indirect
 	github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cristalhq/jwt/v4 v4.0.2 // indirect
+	github.com/cristalhq/jwt/v4 v4.0.2
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.1.6 // indirect

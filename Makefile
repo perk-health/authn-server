@@ -18,12 +18,13 @@ init: $(BIN)/ego
 	$(BIN)/ego server/views
 
 # Run the server
+# OLD COMMAND: go run -ldflags "-X main.VERSION=$(VERSION)" $(MAIN)
 .PHONY: server
 server: init
 	docker-compose up -d redis
 	DATABASE_URL=sqlite3://localhost/dev \
 		REDIS_URL=redis://127.0.0.1:8701/11 \
-		go run -ldflags "-X main.VERSION=$(VERSION)" $(MAIN)
+		nodemon --signal SIGTERM --exec go run -ldflags "-X main.VERSION=$(VERSION)" $(MAIN)
 
 # Run tests
 .PHONY: test
