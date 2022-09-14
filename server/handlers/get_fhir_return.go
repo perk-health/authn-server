@@ -1,18 +1,26 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/keratin/authn-server/app"
+	"github.com/keratin/authn-server/app/services"
+	"github.com/keratin/authn-server/lib/oauth"
 	"github.com/keratin/authn-server/lib/smart_on_fhir"
+	"github.com/keratin/authn-server/server/sessions"
 	"github.com/pkg/errors"
+	"golang.org/x/oauth2"
 )
 
 func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		provider := app.SmartOnFhirProviders[providerName]
 
+		provider := app.SmartOnFhirProviders[providerName]
+		// exchange code for tokens and user info
+		// redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return"
+		tokenUrl := provider.TokenUrl()
+		clientId := provider.ClientID()
+		clientSecret := provider.ClientSecret()
 		state, err := getState(app.Config, r)
 		if err != nil {
 			app.Reporter.ReportRequestError(errors.Wrap(err, "getState"), r)
@@ -22,47 +30,77 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		}
 		http.SetCookie(w, nonceCookie(app.Config, ""))
 
-		// exchange code for tokens and user info
-		// redirectURI := app.Config.AuthNURL.String() + "/fhir/" + providerName + "/return"
-		tokenUrl := provider.TokenUrl()
-		clientId := provider.ClientID()
-		clientSecret := provider.ClientSecret()
+		fail := func(err error) {
+			app.Reporter.ReportRequestError(err, r)
+			redirectFailure(w, r, state.Destination)
+		}
 
+		// ===> exchange code for tokens and user info
 		tokenResponse, err := smart_on_fhir.RequestAccessToken(tokenUrl, clientId, clientSecret, r.FormValue("code"))
-
+		if err != nil {
+			fail(err)
+			return
+		}
 		providerUser, err := provider.UserInfo(tokenResponse)
 		if err != nil {
-			// fail(errors.Wrap(err, "userInfo"))
-			fmt.Println("Error getting user info:", err)
+			fail(err)
 			return
 		}
 
-		fmt.Println("GetFhirReturn: providerUser:", providerUser.Email)
+		// ===> attempt to reconcile oauth identity information into an authn account and return a session token
+		sessionToken, err := getSessionFromOauth(app, providerUser, tokenResponse, r, providerName)
+		if err != nil {
+			fail(err)
+			return
+		}
+		// Return the signed session in a cookie
+		sessions.Set(app.Config, w, sessionToken)
 
-		// TODO: Figure out proper way to extract user information to link with OAuth account
+		// Set FHIR Information in a cookie
+		cookie := &http.Cookie{
+			Name:     "fhir_session",
+			Value:    tokenResponse.AccessToken + "::" + tokenResponse.PatientFhirId,
+			Path:     "/fhir/",
+			Secure:   app.Config.ForceSSL,
+			HttpOnly: false,
+			SameSite: app.Config.SameSiteComputed(),
+			MaxAge:   100000,
+		}
+		http.SetCookie(w, cookie)
 
-		// attempt to reconcile oauth identity information into an authn account
-		// sessionAccountID := sessions.GetAccountID(r)
-		// account, err := services.IdentityReconciler(app.AccountStore, app.Config, providerName, providerUser, tok, sessionAccountID)
-		// if err != nil {
-		// 	// fail(err)
-		// 	return
-		// }
-
-		// // identityToken is not returned in this flow. it must be imported by the frontend like a SSO session.
-		// sessionToken, _, err := services.SessionCreator(
-		// 	app.AccountStore, app.RefreshTokenStore, app.KeyStore, app.Actives, app.Config, app.Reporter,
-		// 	account.ID, &app.Config.ApplicationDomains[0], sessions.GetRefreshToken(r),
-		// )
-		// if err != nil {
-		// 	// fail(errors.Wrap(err, "NewSession"))
-		// 	return
-		// }
-
-		// // Return the signed session in a cookie
-		// sessions.Set(app.Config, w, sessionToken)
-
-		// redirect back to frontend (success or failure)
+		// redirect to the destination
 		http.Redirect(w, r, state.Destination, http.StatusSeeOther)
 	}
+}
+
+func getSessionFromOauth(app *app.App, providerUser *smart_on_fhir.UserInfo, tokenResponse *smart_on_fhir.FhirTokenResponse, r *http.Request, providerName string) (string, error) {
+	// attempt to reconcile oauth identity information into an authn account
+	sessionAccountID := sessions.GetAccountID(r)
+
+	// Cast smartOnfhir structs to oauth structs b/c I don't know how to type cast them
+	oauthProviderUser := &oauth.UserInfo{
+		ID:    providerUser.ID,
+		Email: providerUser.Email,
+	}
+
+	tok := &oauth2.Token{
+		AccessToken: tokenResponse.AccessToken,
+	}
+
+	// Use oauth service to reconcile with existing identities
+	account, err := services.IdentityReconciler(app.AccountStore, app.Config, providerName, oauthProviderUser, tok, sessionAccountID)
+	if err != nil {
+		return "", err
+	}
+
+	// identityToken is not returned in this flow. it must be imported by the frontend like a SSO session.
+	sessionToken, _, err := services.SessionCreator(
+		app.AccountStore, app.RefreshTokenStore, app.KeyStore, app.Actives, app.Config, app.Reporter,
+		account.ID, &app.Config.ApplicationDomains[0], sessions.GetRefreshToken(r),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return sessionToken, nil
 }

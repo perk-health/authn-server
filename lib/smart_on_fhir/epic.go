@@ -2,7 +2,7 @@ package smart_on_fhir
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"crypto/rsa"
 
@@ -37,50 +37,62 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 	return &FhirProvider{
 		config: config,
 		UserInfo: func(t *FhirTokenResponse) (*UserInfo, error) {
+			// 1. Get the JWKS from Epic
 			keys, err := fetchEpicJWKS()
 			if err != nil {
-				return nil, err
+				return nil, err // No JWKS, can't verify the JWT, return an error
 			}
 
-			idToken, err := jwt.ParseNoVerify([]byte(t.IdToken))
-			var epicIdTokenClaims *EpicIdTokenClaim
-			json.Unmarshal(idToken.Claims(), &epicIdTokenClaims)
-
-			hasJwks := false
-			var rsaPublicKey *rsa.PublicKey
-
-			fmt.Println("==> Token kid:", idToken.Header().KeyID)
-			for index, key := range keys.Keys {
-				fmt.Println("===> Key", index + 1, "kid:", key.KeyID)
-
-				if key.KeyID == idToken.Header().KeyID {
-					rsaPublicKey, err = buildRSAPublicKey(key.Modulus, key.Exponent)
-					hasJwks = true
-					break
-				}
+			// 2. Verify the ID Token
+			verifiedToken, err := verifyEpicIdToken(keys, t)
+			if err != nil {
+				return nil, err // verification failed, return an error
 			}
 
-			// create a Verifier (HMAC in this example)
-			verifier, err := jwt.NewVerifierRS(jwt.RS256, rsaPublicKey)
-
-			_, err = jwt.Parse([]byte(t.IdToken), verifier)
-			if err == nil {
-				fmt.Println("=========== ID Token verified ===========")
-			} else {
-				return nil, err
-			}
-
-			if hasJwks {
-				fmt.Println("=========== Key ID matches ===========")
-				var user UserInfo
-				user.ID = epicIdTokenClaims.Subject
-				user.Email = epicIdTokenClaims.Subject // User's email is going to be user's ID on Epic
-				fmt.Println(user)
-				return &user, err
-			} else {
-				fmt.Println("=========== Key ID does not match ===========")
-				return nil, err
-			}
+			// 3. Get the user info from the ID Token & return it
+			var user UserInfo
+			user.ID = verifiedToken.Subject
+			user.Email = verifiedToken.Subject // User's email is going to be user's ID on Epic
+			return &user, err
 		},
 	}
+}
+
+func verifyEpicIdToken(keys *EpicJwksResponse, tokenResponse *FhirTokenResponse) (*EpicIdTokenClaim, error) {
+	// 1. Parse the JWT and extract it's data WITHOUT verifying the signature
+	idToken, err := jwt.ParseNoVerify([]byte(tokenResponse.IdToken))
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Convert the JWT to a map
+	var tokenClaims *EpicIdTokenClaim
+	json.Unmarshal(idToken.Claims(), &tokenClaims)
+
+	// 3. Find the key that matches the key ID in the JWT
+	hasJwks := false
+	var rsaPublicKey *rsa.PublicKey
+	for _, key := range keys.Keys {
+		if key.KeyID == idToken.Header().KeyID {
+			rsaPublicKey, err = buildRSAPublicKey(key.Modulus, key.Exponent)
+			hasJwks = true
+			break
+		}
+	}
+
+	// 4. If we don't have a key, we can't verify the JWT. Return an error
+	if !hasJwks {
+		return nil, errors.New("No matching key found for ID Token")
+	}
+
+	// 5. Verify the JWT
+	verifier, err := jwt.NewVerifierRS(jwt.RS256, rsaPublicKey)
+	_, err = jwt.Parse([]byte(tokenResponse.IdToken), verifier)
+
+	// 6. If verification failed, return an error
+	if err != nil {
+		return nil, err
+	}
+
+	return tokenClaims, nil
 }
