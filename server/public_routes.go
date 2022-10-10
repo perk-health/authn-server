@@ -86,5 +86,17 @@ func PublicRoutes(app *app.App) []*route.HandledRoute {
 		)
 	}
 
+	for providerName := range app.SmartOnFhirProviders {
+		routes = append(routes,
+			route.Get("/fhir/"+providerName).
+				SecuredWith(route.Unsecured()).
+				Handle(handlers.GetFhirLaunch(app, providerName)),
+
+			route.Get("/fhir/"+providerName+"/return").
+				SecuredWith(route.Unsecured()).
+				Handle(handlers.GetFhirReturn(app, providerName)),
+		)
+	}
+
 	return routes
 }

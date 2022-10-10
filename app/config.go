@@ -20,6 +20,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/keratin/authn-server/lib/oauth"
 	"github.com/keratin/authn-server/lib/route"
+	"github.com/keratin/authn-server/lib/smart_on_fhir"
 	"github.com/keratin/authn-server/ops"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -75,6 +76,7 @@ type Config struct {
 	FacebookOauthCredentials    *oauth.Credentials
 	DiscordOauthCredentials     *oauth.Credentials
 	MicrosoftOauthCredientials  *oauth.Credentials
+	EpicSmartOnFhirCredentials  *smart_on_fhir.Credentials
 }
 
 // OAuthEnabled returns true if any provider is configured.
@@ -84,6 +86,10 @@ func (c *Config) OAuthEnabled() bool {
 		c.FacebookOauthCredentials != nil ||
 		c.DiscordOauthCredentials != nil ||
 		c.MicrosoftOauthCredientials != nil
+}
+
+func (c *Config) SmartOnFhirEnabled() bool {
+	return c.EpicSmartOnFhirCredentials != nil
 }
 
 // SameSiteComputed returns either the specified http.SameSite, or a computed one from OAuth config
@@ -620,6 +626,19 @@ var configurers = []configurer{
 			credentials, err := oauth.NewCredentials(val)
 			if err == nil {
 				c.MicrosoftOauthCredientials = credentials
+			}
+			return err
+		}
+		return nil
+	},
+
+	// Epic Smart on FHIR OAuth Credentials is a credential pair in the format `id:secret`. When specified,
+	// AuthN will enable routes for Epic Smart on Smart on FHIR signin.
+	func(c *Config) error {
+		if val, ok := os.LookupEnv("EPIC_SMART_ON_FHIR_CREDENTIALS"); ok {
+			credentials, err := smart_on_fhir.NewCredentials(val)
+			if err == nil {
+				c.EpicSmartOnFhirCredentials = credentials
 			}
 			return err
 		}
