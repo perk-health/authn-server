@@ -59,12 +59,13 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		// Set FHIR Information in a cookie
 		cookie := &http.Cookie{
 			Name:     "fhir_session",
-			Value:    tokenResponse.AccessToken + "::" + tokenResponse.PatientFhirId,
+			Value:    tokenResponse.AccessToken + "::" + tokenResponse.IdToken + "::" + tokenResponse.PatientFhirId,
 			Path:     "/fhir/",
 			Secure:   app.Config.ForceSSL,
 			HttpOnly: false,
 			SameSite: app.Config.SameSiteComputed(),
-			MaxAge:   100000,
+			// TODO: Set max age to a very low number.
+			MaxAge: 100,
 		}
 		http.SetCookie(w, cookie)
 
