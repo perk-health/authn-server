@@ -43,6 +43,15 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 			fail(err)
 			return
 		}
+
+		fmt.Println("Finished Getting Token Response...")
+		fmt.Println("tokenResponse.IdToken: ", tokenResponse.IdToken)
+		fmt.Println("tokenResponse.AccessToken: ", tokenResponse.AccessToken)
+		fmt.Println("tokenResponse.Scope: ", tokenResponse.Scope)
+		fmt.Println("tokenResponse.Encounter: ", tokenResponse.Encounter)
+		fmt.Println("tokenResponse.PatientFhirId: ", tokenResponse.PatientFhirId)
+		fmt.Println("...")
+
 		providerUser, err := provider.UserInfo(tokenResponse)
 		if err != nil {
 			fmt.Println("Error getting Provider User: ")
