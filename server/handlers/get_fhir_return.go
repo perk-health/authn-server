@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/keratin/authn-server/app"
@@ -38,11 +39,13 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		// ===> exchange code for tokens and user info
 		tokenResponse, err := smart_on_fhir.RequestAccessToken(tokenUrl, clientId, clientSecret, r.FormValue("code"))
 		if err != nil {
+			fmt.Println("Error requesting access token: ")
 			fail(err)
 			return
 		}
 		providerUser, err := provider.UserInfo(tokenResponse)
 		if err != nil {
+			fmt.Println("Error getting Provider User: ")
 			fail(err)
 			return
 		}
@@ -50,6 +53,7 @@ func GetFhirReturn(app *app.App, providerName string) http.HandlerFunc {
 		// ===> attempt to reconcile oauth identity information into an authn account and return a session token
 		sessionToken, err := getSessionFromOauth(app, providerUser, tokenResponse, r, providerName)
 		if err != nil {
+			fmt.Println("Error getting session token: ")
 			fail(err)
 			return
 		}
