@@ -15,11 +15,16 @@ func RequestAccessToken(tokenUrl string, clientId string, clientSecret string, c
 		Timeout: time.Second * 10,
 	}
 
+	fmt.Println("Requesting access token from " + tokenUrl)
+	fmt.Println("Using client ID " + clientId)
+	fmt.Println("Using client secret " + clientSecret)
+	fmt.Println("Using code " + code)
+
 	// Set the form data for the request
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", "http://localhost:21001/fhir/epic/return")
+	data.Set("redirect_uri", "https://sch-auth.app-demos.com/fhir/epic/return")
 	data.Set("client_id", clientId)
 	data.Set("client_secret", clientSecret)
 
