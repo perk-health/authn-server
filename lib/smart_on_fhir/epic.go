@@ -48,8 +48,8 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 			// 2. Verify the ID Token
 			verifiedToken, err := verifyEpicIdToken(keys, t)
 			if err != nil {
-				fmt.Println("#UserInfo: Error verifying ID Token")
-				return nil, err // verification failed, return an error
+				fmt.Println("#UserInfo: Error verifying ID Token") // <= Failure HERE!
+				return nil, err                                    // verification failed, return an error
 			}
 
 			// 3. Get the user info from the ID Token & return it
@@ -62,10 +62,13 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 }
 
 func verifyEpicIdToken(keys *EpicJwksResponse, tokenResponse *FhirTokenResponse) (*EpicIdTokenClaim, error) {
+	fmt.Println("#verifyEpicIdToken: Verifying ID Token")
+	fmt.Println("#verifyEpicIdToken: TokenResponse.IDToken: ", tokenResponse.IdToken)
+
 	// 1. Parse the JWT and extract it's data WITHOUT verifying the signature
 	idToken, err := jwt.ParseNoVerify([]byte(tokenResponse.IdToken))
 	if err != nil {
-		fmt.Println("#verifyEpicIdToken: Error parsing ID Token")
+		fmt.Println("#verifyEpicIdToken: Error parsing ID Token") // <= Failure HERE!
 		return nil, err
 	}
 
