@@ -3,6 +3,7 @@ package smart_on_fhir
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"crypto/rsa"
 
@@ -40,12 +41,14 @@ func NewEpicSmartOnFhirProvider(credentials *Credentials) *FhirProvider {
 			// 1. Get the JWKS from Epic
 			keys, err := fetchEpicJWKS()
 			if err != nil {
+				fmt.Println("#UserInfo: Error fetching JWKS from Epic")
 				return nil, err // No JWKS, can't verify the JWT, return an error
 			}
 
 			// 2. Verify the ID Token
 			verifiedToken, err := verifyEpicIdToken(keys, t)
 			if err != nil {
+				fmt.Println("#UserInfo: Error verifying ID Token")
 				return nil, err // verification failed, return an error
 			}
 
@@ -62,6 +65,7 @@ func verifyEpicIdToken(keys *EpicJwksResponse, tokenResponse *FhirTokenResponse)
 	// 1. Parse the JWT and extract it's data WITHOUT verifying the signature
 	idToken, err := jwt.ParseNoVerify([]byte(tokenResponse.IdToken))
 	if err != nil {
+		fmt.Println("#verifyEpicIdToken: Error parsing ID Token")
 		return nil, err
 	}
 
@@ -91,6 +95,7 @@ func verifyEpicIdToken(keys *EpicJwksResponse, tokenResponse *FhirTokenResponse)
 
 	// 6. If verification failed, return an error
 	if err != nil {
+		fmt.Println("#verifyEpicIdToken: Error verifying ID Token")
 		return nil, err
 	}
 

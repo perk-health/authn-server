@@ -2,6 +2,7 @@ package smart_on_fhir
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -25,6 +26,7 @@ func fetchEpicJWKS() (*EpicJwksResponse, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Println("#fetchEpicJWKS: Error fetching EPIC openid-configuration")
 		return nil, err
 	}
 
@@ -39,6 +41,7 @@ func fetchEpicJWKS() (*EpicJwksResponse, error) {
 
 	jwksResp, err := client.Do(jwksReq)
 	if err != nil {
+		fmt.Println("#fetchEpicJWKS: Error fetching EPIC JWKS")
 		return nil, err
 	}
 	defer jwksResp.Body.Close()
